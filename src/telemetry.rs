@@ -9,13 +9,15 @@ pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
     set_global_default(subscriber).expect("Failed to set tracing subscriber");
 }
 
-pub fn get_subscriber(
+pub fn get_subscriber<'a>(
     name: String,
     env_filter: String,
-    sink: impl MakeWriter + Send + Sync + 'static,
+    // TODO make sure to use this when you figure out how :)
+    sink: impl MakeWriter<'a> + Send + Sync + 'static,
 ) -> impl Subscriber + Sync + Send {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
-    let formatting_layer = BunyanFormattingLayer::new(name, sink);
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(env_filter));
+    let formatting_layer = BunyanFormattingLayer::new(name, std::io::stdout);
 
     Registry::default()
         .with(env_filter)
