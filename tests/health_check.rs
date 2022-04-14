@@ -157,7 +157,7 @@ async fn subscriber_returns_a_400_when_data_is_missing() {
 }
 
 #[actix_web::test]
-async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
+async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     // setup
     let app = spawn_app().await;
     let client = Client::new();
@@ -178,19 +178,19 @@ async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
             .await
             .expect("Failed to execute request.");
         let status = response.status().as_u16();
-        let body = response.text().await.unwrap();
+        // let body = response.text().await.unwrap();
 
         // Assert
         assert_eq!(
-            200,
+            400,
             status,
-            "The API did not return a 200 OK when the payload was {}.",
+            "The API did not return a 400 Bad Request when the payload was '{}'.",
             description
         );
-        assert!(
-            body.contains(description),
-            "Body does not contain \"{}\"",
-            description
-        );
+        // assert!(
+        //     body.contains(description),
+        //     "Body does not contain \"{}\"",
+        //     description
+        // );
     }
 }

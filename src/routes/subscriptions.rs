@@ -1,10 +1,10 @@
 use actix_web::{web, HttpResponse, Responder};
-use sqlx::PgPool;
-use tracing::error;
-use uuid::Uuid;
 use chrono::Utc;
+use sqlx::PgPool;
+use tracing::{error,instrument};
+use uuid::Uuid;
 
-use crate::domain::{SubscriberName, NewSubscriber};
+use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 
 #[derive(serde::Deserialize)]
 pub struct SubscribeForm {
@@ -12,7 +12,7 @@ pub struct SubscribeForm {
     name: String,
 }
 
-#[tracing::instrument(
+#[instrument(
     skip(form, pool),
     fields(
         subscriber_name = %form.name,
@@ -20,17 +20,32 @@ pub struct SubscribeForm {
     )
 )]
 pub async fn subscribe(form: web::Json<SubscribeForm>, pool: web::Data<PgPool>) -> impl Responder {
+    let name = match SubscriberName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(e) => {
+            error!("Invalid name: {}", e);
+            return HttpResponse::BadRequest().finish();
+        }
+    };
+    let email = match SubscriberEmail::parse(form.0.email) {
+        Ok(email) => email,
+        Err(e) => {
+            error!("Invalid email: {}", e);
+            return HttpResponse::BadRequest().finish();
+        }
+    };
+
     let subscriber = NewSubscriber {
-        name: SubscriberName::parse(form.0.name),
-        email: form.0.email,
+        name,
+        email,
     };
     match insert_subscriber(&pool, &subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::InternalServerError().finish()
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
-#[tracing::instrument(skip(form, pool))]
+#[instrument(skip(form, pool))]
 pub async fn insert_subscriber(pool: &PgPool, form: &NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -38,7 +53,7 @@ pub async fn insert_subscriber(pool: &PgPool, form: &NewSubscriber) -> Result<()
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        form.email,
+        form.email.as_ref(),
         form.name.as_ref(),
         Utc::now()
     )
