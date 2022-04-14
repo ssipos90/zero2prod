@@ -1,25 +1,37 @@
-use dotenv::{dotenv, var};
-use sqlx::PgPool;
+use secrecy::ExposeSecret;
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::{io::stdout, net::TcpListener};
-use zero2prod::{startup::run, telemetry::{get_subscriber, init_subscriber}};
+use zero2prod::{
+    startup::run,
+    telemetry::{get_subscriber, init_subscriber},
+    configuration::get_configuration
+};
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
+    let configuration = get_configuration().unwrap();
 
-    let subscriber = get_subscriber("zero2prod".into(), "info".into(), stdout);
+    let subscriber = get_subscriber(
+        "zero2prod".into(),
+        "info".into(),
+        stdout
+    );
 
     init_subscriber(subscriber);
 
-    let database_url = var("DATABASE_URL").expect("No DATABASE_URL env var");
-    let port = var("PORT").map_or(8000, |v| v.parse().expect("PORT cannot be parsed as i32"));
-    let address = format!("127.0.0.1:{}", port);
-    let listener = TcpListener::bind(&address)
-        .expect(format!("Could not bind address {}.", &address).as_str());
+    let listener = TcpListener::bind(&configuration.application_address)
+        .expect(
+            format!(
+                "Could not bind address {}.",
+                &configuration.application_address
+            ).as_str()
+        );
 
-    let pool = PgPool::connect(&database_url)
-        .await
-        .expect("Failed to connect to Postgres.");
+    let pool = PgPoolOptions::new()
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy(&configuration.database_url.expose_secret())
+        .unwrap();
 
-    run(listener, pool)?.await
+    run(listener, pool)?.await?;
+    Ok(())
 }

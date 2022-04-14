@@ -1,0 +1,12 @@
+GET http://localhost:8001/subscriptions
+
+###
+
+POST http://localhost:8001/subscriptions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "waa",
+  "email": "smf"
+}

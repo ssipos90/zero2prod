@@ -1,0 +1,15 @@
+services:
+  zero2prod:
+    build: .
+    container_name: zero2prod
+    env_file:
+      - .env.production
+    networks:
+      - postgres
+      - proxy
+
+networks:
+  proxy:
+    name: proxy_default
+  postgres:
+    name: postgres_default
