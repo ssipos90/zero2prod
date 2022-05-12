@@ -1,4 +1,4 @@
-use dotenv::{dotenv, var};
+use dotenv::from_filename;
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
@@ -7,11 +7,11 @@ use std::{env, io, net::TcpListener};
 use uuid::Uuid;
 use zero2prod::{
     startup::run,
-    telemetry::{get_subscriber, init_subscriber},
+    telemetry::{get_subscriber, init_subscriber}, configuration::get_configuration, email_client::EmailClient,
 };
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    dotenv().ok();
+    from_filename(".env.testing").ok();
     let default_filter_level = "info".to_string();
     let subscriber_name = "test".to_string();
 
@@ -31,13 +31,27 @@ struct TestApp {
 
 async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
+    let configuration = get_configuration()
+        .expect("Failed to load configuration.");
 
-    let database_url = Secret::new(var("TEST_DATABASE_URL").expect("No DATABASE_URL env var"));
+    let sender_email = configuration.email_client.sender()
+        .expect("Invalid sender email address.");
+
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url,
+        sender_email,
+        configuration.email_client.authorization_token
+    );
+
     let database_name = Uuid::new_v4().to_string();
-    let db_pool = prepare_db(&database_url, &database_name).await;
+    let db_pool = configure_database(
+        &configuration.database_url,
+        &database_name
+    ).await;
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
-    let server = run(listener, db_pool.clone()).expect("Failed to bind to address");
+
+    let server = run(listener, db_pool.clone(), email_client).expect("Failed to bind to address");
     let _ = tokio::spawn(server);
 
     TestApp {
@@ -46,7 +60,7 @@ async fn spawn_app() -> TestApp {
     }
 }
 
-async fn prepare_db(database_url: &Secret<String>, database_name: &str) -> PgPool {
+async fn configure_database(database_url: &Secret<String>, database_name: &str) -> PgPool {
     let database_url = database_url.expose_secret();
     let mut connection = PgConnection::connect(&database_url)
         .await

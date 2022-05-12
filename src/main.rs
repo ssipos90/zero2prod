@@ -4,7 +4,7 @@ use std::{io::stdout, net::TcpListener};
 use zero2prod::{
     startup::run,
     telemetry::{get_subscriber, init_subscriber},
-    configuration::get_configuration
+    configuration::get_configuration, email_client::EmailClient
 };
 
 #[tokio::main]
@@ -32,6 +32,16 @@ async fn main() -> std::io::Result<()> {
         .connect_lazy(&configuration.database_url.expose_secret())
         .unwrap();
 
-    run(listener, pool)?.await?;
+    let sender_email = configuration.email_client.sender()
+        .expect("Invalid sender email address.");
+
+
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url,
+        sender_email,
+        configuration.email_client.authorization_token
+    );
+
+    run(listener, pool, email_client)?.await?;
     Ok(())
 }

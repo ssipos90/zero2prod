@@ -12,6 +12,20 @@ pub struct SubscribeForm {
     name: String,
 }
 
+impl TryFrom<SubscribeForm> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(form: SubscribeForm) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(form.name)?;
+        let email = SubscriberEmail::parse(form.email)?;
+
+        Ok(NewSubscriber {
+            name,
+            email,
+        })
+    }
+}
+
 #[instrument(
     skip(form, pool),
     fields(
@@ -20,25 +34,11 @@ pub struct SubscribeForm {
     )
 )]
 pub async fn subscribe(form: web::Json<SubscribeForm>, pool: web::Data<PgPool>) -> impl Responder {
-    let name = match SubscriberName::parse(form.0.name) {
-        Ok(name) => name,
-        Err(e) => {
-            error!("Invalid name: {}", e);
-            return HttpResponse::BadRequest().finish();
-        }
-    };
-    let email = match SubscriberEmail::parse(form.0.email) {
-        Ok(email) => email,
-        Err(e) => {
-            error!("Invalid email: {}", e);
-            return HttpResponse::BadRequest().finish();
-        }
+    let subscriber = match form.into_inner().try_into() {
+        Ok(subscriber) => subscriber,
+        Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
-    let subscriber = NewSubscriber {
-        name,
-        email,
-    };
     match insert_subscriber(&pool, &subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
