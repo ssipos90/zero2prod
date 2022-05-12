@@ -1,32 +1,19 @@
-POST https://api.sendgrid.com/v3/mail/send
-Authorization: Bearer $SENDGRID_API_KEY
+POST https://mandrillapp.com/api/1.0/messages/send
 Content-Type: application/json
 
 {
-  "personalizations": [
-    {
-      "to": [
-        {
-          "email": "sebastiansipos90@gmail.com",
-          "name": "Sebastian Sipos"
-        }
-      ]
-    }
-  ],
-  "from": {
-    "email": "zero2prod@ssipos.ro",
-    "name": "Zero2Prod - Ssipos"
-  },
-  "subject": "Hello, World!",
-  "content": [
-    {
-      "type": "text/plain",
-      "value": "Hello from Twilio SendGrid!\nSending with the email service trusted by developers
-      and marketers for reasons"
-    },
-    {
-      "type": "text/html",
-      "value": "<p>Hello from Twilio SendGrid!</p><p>Sending with the email service trusted by developers and marketers for <strong>time-savings</strong>, <strong>scalability</strong>, and <strong>delivery expertise</strong>.</p>"
-    }
-  ]
+  "key": "{{EMAIL_CLIENT_AUTHORIZATION_TOKEN}}",
+  "message": {
+    "to": [
+      {
+        "email": "null@ssipos.ro",
+        "name": "Sebastian Sipos"
+      }
+    ],
+    "from_email": "zero2prod@ssipos.ro",
+    "from_name": "Zero2Prod - Ssipos",
+    "subject": "Hello, World!",
+    "text": "Hello from Mailchimp",
+    "html": "<p>Hello from Mailchimp!</p>"
+  }
 }

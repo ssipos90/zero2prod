@@ -32,21 +32,26 @@ impl EmailClient {
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
         let url = format!("{}/send", self.base_url);
-        let request_body = SendEmailRequest {
-            from: self.sender.as_ref(),
-            to: recipient.as_ref(),
-            subject,
-            html_body: html_content,
-            text_body: text_content,
+        let recepient = SendEmailMessageRecepient {
+            email: recipient.as_ref(),
+            name: "Test",
+        };
+
+        let request_body = SendEmailMessageRequest {
+            key: &self.authorization_token.expose_secret(),
+            message: SendEmailMessageDetails {
+                to: [recepient],
+                from_email: self.sender.as_ref(),
+                from_name: self.sender.as_ref(),
+                subject,
+                html: html_content,
+                text: text_content,
+            },
         };
 
         let _builder = self
             .http_client
             .post(&url)
-            .header(
-                "Authorization",
-                format!("Bearer {}", self.authorization_token.expose_secret()),
-            )
             .json(&request_body)
             .send()
             .await?;
@@ -56,12 +61,25 @@ impl EmailClient {
 }
 
 #[derive(serde::Serialize)]
-struct SendEmailRequest<'a> {
-    from: &'a str,
-    to: &'a str,
+struct SendEmailMessageRecepient<'a> {
+    email: &'a str,
+    name: &'a str,
+}
+
+#[derive(serde::Serialize)]
+struct SendEmailMessageDetails<'a> {
+    from_email: &'a str,
+    from_name: &'a str,
+    to: [SendEmailMessageRecepient<'a>; 1],
     subject: &'a str,
-    html_body: &'a str,
-    text_body: &'a str,
+    html: &'a str,
+    text: &'a str,
+}
+
+#[derive(serde::Serialize)]
+struct SendEmailMessageRequest<'a> {
+    key: &'a str,
+    message: SendEmailMessageDetails<'a>,
 }
 
 #[cfg(test)]
@@ -87,11 +105,16 @@ mod tests {
             let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
             if let Ok(body) = result {
                 dbg!(&body);
-                body.get("from").is_some()
-                 && body.get("to").is_some()
-                 && body.get("subject").is_some()
-                 && body.get("html_body").is_some()
-                 && body.get("text_body").is_some()
+                match body.get("message") {
+                    Some(message) => {
+                        message.get("from_name").is_some()
+                            && message.get("to").is_some()
+                            && message.get("subject").is_some()
+                            && message.get("html_body").is_some()
+                            && message.get("text_body").is_some()
+                    }
+                    None => false,
+                }
             } else {
                 false
             }
@@ -108,8 +131,7 @@ mod tests {
         let subject: String = Sentence(1..2).fake();
         let content: String = Paragraph(1..10).fake();
 
-        Mock::given(header_exists("Authorization"))
-            .and(header("Content-Type", "application/json"))
+        Mock::given(header("Content-Type", "application/json"))
             .and(path("/send"))
             .and(method("POST"))
             .and(SendEmailBodyMatcher)
