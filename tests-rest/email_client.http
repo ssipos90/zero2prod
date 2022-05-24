@@ -1,4 +1,5 @@
 POST https://mandrillapp.com/api/1.0/messages/send
+Authorization: Bearer 
 Content-Type: application/json
 
 {

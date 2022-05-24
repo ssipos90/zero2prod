@@ -3,12 +3,15 @@ use dotenv::{dotenv, var, Error};
 
 use crate::domain::SubscriberEmail;
 
+#[derive(Clone, Debug)]
 pub struct EmailClientSettings {
     pub base_url: String,
     pub authorization_token: Secret<String>,
     pub sender_email: String,
+    pub timeout_milliseconds: u64,
 }
 
+#[derive(Clone, Debug)]
 pub struct Settings {
     pub database_url: Secret<String>,
     pub application_address: String,
@@ -18,6 +21,10 @@ pub struct Settings {
 impl EmailClientSettings {
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::parse(self.sender_email.clone())
+    }
+
+    pub fn timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.timeout_milliseconds)
     }
 }
 
@@ -35,6 +42,7 @@ pub fn get_configuration() -> Result<Settings, Error> {
             authorization_token: Secret::new(var("EMAIL_CLIENT_AUTHORIZATION_TOKEN").expect("EMAIL_CLIENT_AUTHORIZATION_TOKEN missing")),
             base_url: var("EMAIL_CLIENT_BASE_URL").expect("EMAIL_CLIENT_BASE_URL missing"),
             sender_email: var("EMAIL_CLIENT_SENDER_EMAIL").expect("EMAIL_CLIENT_SENDER_EMAIL missing"),
+            timeout_milliseconds: var("EMAIL_CLIENT_TIMEOUT_MILLISECONDS").map_or(5000, |v| v.parse::<u64>().expect("EMAIL_CLIENT_TIMEOUT_MILLISECONDS cannot be parsed as u64")),
         },
     })
 }
