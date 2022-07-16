@@ -10,6 +10,6 @@ services:
 
 networks:
   proxy:
-    name: proxy_default
+    name: services_default
   postgres:
-    name: postgres_default
+    name: services_default

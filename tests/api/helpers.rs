@@ -2,6 +2,7 @@ use dotenv::from_filename;
 use once_cell::sync::Lazy;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
+use wiremock::MockServer;
 use std::{env, io};
 use uuid::Uuid;
 use zero2prod::{
@@ -27,22 +28,41 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
+}
+
+impl TestApp {
+    pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/subscriptions", &self.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
     let database_name = Uuid::new_v4().to_string();
+
+    let email_server = MockServer::start().await;
+
     let configuration = {
         let mut c = get_configuration().expect("Failed to load configuration.");
 
         configure_database(&c.database_url, &database_name).await;
 
         c.database_url = Secret::new(format!(
-            "{}{}",
+            "{}/{}",
             c.database_url.expose_secret(),
             &database_name
         ));
+
+        c.email_client.base_url = email_server.uri();
 
         c
     };
@@ -54,15 +74,16 @@ pub async fn spawn_app() -> TestApp {
     let _ = tokio::spawn(application.server);
 
     let database_url = configuration.database_url.expose_secret();
-    let address_len = configuration.application_address.len();
+    let address_len = configuration.application.address.len();
 
     let address = format!(
         "http://{}:{}",
-        &configuration.application_address[0..address_len - 2],
+        &configuration.application.address[0..address_len - 2],
         port
     );
     TestApp {
         db_pool: get_connection_pool(database_url),
+        email_server,
         address
     }
 }
