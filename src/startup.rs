@@ -45,7 +45,7 @@ pub struct Application {
 
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
-        let pool = get_connection_pool(&configuration.database_url.expose_secret());
+        let pool = get_connection_pool(configuration.database_url.expose_secret());
 
         let sender_email = configuration
             .email_client
@@ -61,13 +61,12 @@ impl Application {
             timeout,
         );
 
-        let listener = TcpListener::bind(&configuration.application.address).expect(
-            format!(
+        let listener = TcpListener::bind(&configuration.application.address).unwrap_or_else(|_| {
+            panic!(
                 "Could not bind address {}.",
                 &configuration.application.address
             )
-            .as_str(),
-        );
+        });
         let port = listener.local_addr().unwrap().port();
         let server = run(
             listener,

@@ -42,12 +42,12 @@ pub fn get_configuration() -> Result<Settings, Error> {
         application: ApplicationSettings {
             address: format!(
                 "{}:{}",
-                var("HTTP_INTERFACE").unwrap_or("127.0.0.1".to_string()),
+                var("HTTP_INTERFACE").unwrap_or_else(|_| "127.0.0.1".to_string()),
                 var("HTTP_PORT").map_or(8000, |v| v
                     .parse::<u16>()
                     .expect("PORT cannot be parsed as u16"))
             ),
-            base_url: var("BASE_URL").unwrap_or("http://127.0.0.1".to_string())
+            base_url: var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1".to_string())
         },
         email_client: EmailClientSettings {
             authorization_token: Secret::new(

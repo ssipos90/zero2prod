@@ -39,7 +39,7 @@ impl EmailClient {
         };
 
         let request_body = SendEmailMessageRequest {
-            key: &self.authorization_token.expose_secret(),
+            key: self.authorization_token.expose_secret(),
             message: SendEmailMessageDetails {
                 to: [recepient],
                 from_email: self.sender.as_ref(),
