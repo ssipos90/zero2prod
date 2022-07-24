@@ -1,5 +1,5 @@
+---
 kind: pipeline
-type: docker
 name: default
 
 steps:
@@ -10,3 +10,15 @@ steps:
     path: /var/run
   commands:
     - docker build .
+
+services:
+- name: docker
+  image: docker:dind
+  privileged: true
+  volumes:
+  - name: dockersock
+    path: /var/run
+
+volumes:
+- name: dockersock
+  temp: {}
