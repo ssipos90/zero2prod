@@ -4,7 +4,9 @@ name: default
 
 steps:
 - name: build
-  image: docker:dind
+  image: quay.io/testcontainers/dind-drone-plugin
+  environment:
+    CI_WORKSPACE: "/drone/src"
   volumes:
   - name: dockersock
     path: /var/run
