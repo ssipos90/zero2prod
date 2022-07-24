@@ -11,6 +11,16 @@ steps:
   commands:
   - sleep 5 # give docker enough time to start
   - docker build .
+- name: publish
+  image: plugins/docker
+  settings:
+    registry: ci.gr8.ro
+    username: ssipos
+    password:
+      from_secret: docker_password
+    repo: ssipos/zero2prod
+    tags:
+      - ${DRONE_COMMIT}
 
 services:
 - name: docker
