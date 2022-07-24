@@ -29,7 +29,11 @@ services:
   volumes:
   - name: dockersock
     path: /var/run
+  - name: dockerdir
+    path: /var/lib/docker
 
 volumes:
 - name: dockersock
   temp: {}
+- name: dockerdir
+  host: /var/lib/docker
