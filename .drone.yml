@@ -4,20 +4,18 @@ name: default
 
 steps:
 - name: build
-  image: quay.io/testcontainers/dind-drone-plugin
-  environment:
-    CI_WORKSPACE: "/drone/src"
+  image: docker:dind
   volumes:
   - name: dockersock
     path: /var/run
   commands:
-    - sleep 5 # to allow docker to start
-    - docker build .
+  - sleep 5 # give docker enough time to start
+  - docker ps -a
 
 services:
 - name: docker
   image: docker:dind
-  priviledged: true
+  privileged: true
   volumes:
   - name: dockersock
     path: /var/run
