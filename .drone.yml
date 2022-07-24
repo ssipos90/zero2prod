@@ -3,8 +3,8 @@ type: docker
 name: default
 
 steps:
-- name: test
-  image: dind
+- name: build
+  image: docker:dind
   volumes:
   - name: dockersock
     path: /var/run
