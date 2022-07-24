@@ -36,13 +36,13 @@ mod tests {
   #[test]
   fn a_256_grapheme_subscriber_name_is_ok() {
     let name = "a".repeat(256);
-    assert_ok!(SubscriberName::parse(name.to_string()));
+    assert_ok!(SubscriberName::parse(name));
   }
 
   #[test]
   fn a_name_longer_than_256_grapheme_is_an_error() {
     let name = "a".repeat(257);
-    assert_err!(SubscriberName::parse(name.to_string()), "Subscriber name is too long");
+    assert_err!(SubscriberName::parse(name), "Subscriber name is too long");
   }
 
   #[test]
