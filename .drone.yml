@@ -9,6 +9,7 @@ steps:
   - name: dockersock
     path: /var/run
   commands:
+    - sleep 5 # to allow docker to start
     - docker build .
 
 services:
