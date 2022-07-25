@@ -15,5 +15,50 @@
       },
       "nullable": []
     }
+  },
+  "96b9629d156e389af427a236f488b51907f1acfc36c60006b18cb0f109856747": {
+    "query": "SELECT subscriber_id FROM subscription_tokens WHERE subscription_token=$1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "subscriber_id",
+          "type_info": "Uuid"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "b876a3df3df42a3e9eb4281bdc6fce9ad2a32d6e0930bbe58ca2b73395fe7ecb": {
+    "query": "INSERT INTO subscription_tokens (subscriber_id, subscription_token)\n        VALUES ($1, $2);",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "d62da6c9db0d437fc1bc7a3977bc63e66d00a8f22faedb5453eab3a0e78401f2": {
+    "query": "UPDATE subscriptions SET status='confirmed' WHERE id = $1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      },
+      "nullable": []
+    }
   }
 }
