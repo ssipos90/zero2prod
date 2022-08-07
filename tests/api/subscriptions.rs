@@ -159,6 +159,37 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
 
     let confirmation_links = app.get_confirmation_links(email_request);
 
-
     assert_eq!(confirmation_links.html, confirmation_links.plain_text);
+}
+
+#[actix_web::test]
+async fn re_subscribe_sends_same_confirmation_email() {
+    let app = spawn_app().await;
+    // given
+    let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    app.post_subscriptions(body.into()).await;
+
+    let first_email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let first_confirmation_links = app.get_confirmation_links(first_email_request);
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    app.post_subscriptions(body.into()).await;
+
+
+    let second_email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let second_confirmation_links = app.get_confirmation_links(second_email_request);
+
+    assert_eq!(first_confirmation_links.plain_text, second_confirmation_links.plain_text);
 }
