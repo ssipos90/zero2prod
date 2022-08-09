@@ -10,7 +10,7 @@ async fn confirmations_without_token_are_rejected_with_400() {
     let app = spawn_app().await;
 
     // when
-   let response = reqwest::get(&format!("{}/subscriptions/confirm", app.address))
+    let response = reqwest::get(&format!("{}/subscriptions/confirm", app.address))
         .await
         .unwrap();
 
@@ -39,9 +39,7 @@ async fn link_returned_by_subscribe_returns_a_200_if_called() {
     let confirmation_links = app.get_confirmation_links(email_request);
 
     // when
-    let response = reqwest::get(confirmation_links.plain_text)
-        .await
-        .unwrap();
+    let response = reqwest::get(confirmation_links.plain_text).await.unwrap();
 
     // then
     assert_eq!(response.status().as_u16(), 200);
@@ -73,22 +71,24 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
         .unwrap();
 
     // then
-    let saved = sqlx::query_as!(
-        ConfirmedSubscriberWithToken,
-        r#"SELECT
-            s.email, s.name, s.status,
-            t.used
-        FROM subscriptions AS s
-        JOIN subscription_tokens AS t
-          ON s.id = t.subscriber_id"#,)
+    let saved_sub = sqlx::query!("SELECT id, email, name, status FROM subscriptions",)
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
-    assert_eq!(saved.name, "le guin");
-    assert_eq!(saved.status, "confirmed");
-    assert!(saved.used);
+    // then
+    let saved_token = sqlx::query!(
+        "SELECT used FROM subscription_tokens WHERE subscriber_id=$1",
+        saved_sub.id
+    )
+    .fetch_one(&app.db_pool)
+    .await
+    .expect("Failed to fetch saved subscription token");
+
+    assert_eq!(saved_sub.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved_sub.name, "le guin");
+    assert_eq!(saved_sub.status, "confirmed");
+    assert!(saved_token.used);
 }
 
 #[actix_web::test]

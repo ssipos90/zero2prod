@@ -22,23 +22,40 @@ pub async fn confirm(pool: web::Data<PgPool>, parameters: web::Query<Params>) ->
                 HttpResponse::Ok().finish()
             }
         }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(_) => {
+            HttpResponse::InternalServerError().finish()
+        },
     }
 }
 
 #[instrument(skip(pool, subscriber_id))]
 async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<(), sqlx::Error> {
-    // TODO: delete token?
+    let mut transaction = pool.begin().await?;
+
     sqlx::query!(
         "UPDATE subscriptions SET status='confirmed' WHERE id = $1",
         subscriber_id
     )
-    .execute(pool)
+    .execute(&mut transaction)
     .await
     .map_err(|e| {
         error!("Failed to execute query: {:?}", e);
         e
     })?;
+
+    sqlx::query!(
+        "UPDATE subscription_tokens SET used=TRUE WHERE subscriber_id = $1",
+        subscriber_id
+    )
+    .execute(&mut transaction)
+    .await
+    .map_err(|e| {
+        error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+
+    transaction.commit().await?;
+
     Ok(())
 }
 

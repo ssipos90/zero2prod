@@ -76,7 +76,9 @@ pub async fn subscribe(
         Err(sqlx::Error::RowNotFound) => {
             let subscriber_id = match insert_subscriber(&mut transaction, &subscriber).await {
                 Ok(subscriber_id) => subscriber_id,
-                Err(_) => return HttpResponse::InternalServerError().finish(),
+                Err(_) => {
+                    return HttpResponse::InternalServerError().finish()
+                },
             };
 
             let subscription_token = generate_subscription_token();
@@ -94,7 +96,9 @@ pub async fn subscribe(
 
             subscription_token
         }
-        Err(_) => return HttpResponse::InternalServerError().finish(),
+        Err(_) => {
+            return HttpResponse::InternalServerError().finish()
+        },
     };
 
     if send_confirmation_email(&email_client, subscriber, &base_url.0, &subscription_token)
