@@ -73,7 +73,14 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
         .unwrap();
 
     // then
-    let saved = sqlx::query!("SELECT email, name, status FROM subscriptions",)
+    let saved = sqlx::query_as!(
+        ConfirmedSubscriberWithToken,
+        r#"SELECT
+            s.email, s.name, s.status,
+            t.used
+        FROM subscriptions AS s
+        JOIN subscription_tokens AS t
+          ON s.id = t.subscriber_id"#,)
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
@@ -81,4 +88,36 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
     assert_eq!(saved.name, "le guin");
     assert_eq!(saved.status, "confirmed");
+    assert!(saved.used);
+}
+
+#[actix_web::test]
+async fn clicking_again_on_the_confirmation_link_returns_gone() {
+    // given
+    let app = spawn_app().await;
+    let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
+
+    Mock::given(path("/send"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    app.post_subscriptions(body.into()).await;
+
+    let email_request = &app.email_server.received_requests().await.unwrap()[0];
+
+    let confirmation_links = app.get_confirmation_links(email_request);
+
+    reqwest::get(confirmation_links.html.as_ref())
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+
+    let second_response = reqwest::get(confirmation_links.html.as_ref())
+        .await
+        .unwrap();
+
+    assert_eq!(second_response.status(), 410);
 }
