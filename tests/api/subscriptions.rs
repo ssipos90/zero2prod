@@ -130,7 +130,7 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/email"))
+    Mock::given(path("/send"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -168,25 +168,30 @@ async fn re_subscribe_sends_same_confirmation_email() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/email"))
+    Mock::given(path("/send"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
         .await;
 
-    app.post_subscriptions(body.into()).await;
+    let first_response = app.post_subscriptions(body.into()).await;
+
+    assert_eq!(200, first_response.status().as_u16());
 
     let first_email_request = &app.email_server.received_requests().await.unwrap()[0];
     let first_confirmation_links = app.get_confirmation_links(first_email_request);
 
-    Mock::given(path("/email"))
+    app.email_server.reset().await;
+
+    Mock::given(path("/send"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
         .await;
 
-    app.post_subscriptions(body.into()).await;
+    let second_response = app.post_subscriptions(body.into()).await;
 
+    assert_eq!(200, second_response.status().as_u16());
 
     let second_email_request = &app.email_server.received_requests().await.unwrap()[0];
     let second_confirmation_links = app.get_confirmation_links(second_email_request);

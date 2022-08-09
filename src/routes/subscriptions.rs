@@ -41,7 +41,7 @@ pub async fn subscribe(
     email_client: web::Data<EmailClient>,
     base_url: web::Data<ApplicationBaseUrl>,
 ) -> impl Responder {
-    let subscriber = match form.0.try_into() {
+    let subscriber: NewSubscriber = match form.0.try_into() {
         Ok(subscriber) => subscriber,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
@@ -51,22 +51,50 @@ pub async fn subscribe(
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
 
-    let subscriber_id = match insert_subscriber(&mut transaction, &subscriber).await {
-        Ok(subscriber_id) => subscriber_id,
+    let existing_subscriber_res = sqlx::query!(
+        r#"SELECT id FROM subscriptions WHERE email = $1"#,
+        subscriber.email.as_ref()
+    )
+    .fetch_one(&mut transaction)
+    .await;
+    let subscription_token = match existing_subscriber_res {
+        Ok(res) => {
+            let existing_token_res = sqlx::query!(
+                "SELECT subscription_token FROM subscription_tokens WHERE subscriber_id = $1",
+                res.id
+            )
+            .fetch_one(&mut transaction)
+            .await;
+
+            match existing_token_res {
+                Ok(row) => row.subscription_token,
+                Err(_) => {
+                    return HttpResponse::InternalServerError().finish();
+                }
+            }
+        }
+        Err(sqlx::Error::RowNotFound) => {
+            let subscriber_id = match insert_subscriber(&mut transaction, &subscriber).await {
+                Ok(subscriber_id) => subscriber_id,
+                Err(_) => return HttpResponse::InternalServerError().finish(),
+            };
+
+            let subscription_token = generate_subscription_token();
+
+            if store_token(&mut transaction, subscriber_id, &subscription_token)
+                .await
+                .is_err()
+            {
+                return HttpResponse::InternalServerError().finish();
+            }
+
+            if transaction.commit().await.is_err() {
+                return HttpResponse::InternalServerError().finish();
+            };
+
+            subscription_token
+        }
         Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-
-    let subscription_token = generate_subscription_token();
-
-    if store_token(&mut transaction, subscriber_id, &subscription_token)
-        .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-
-    if transaction.commit().await.is_err() {
-        return HttpResponse::InternalServerError().finish();
     };
 
     if send_confirmation_email(&email_client, subscriber, &base_url.0, &subscription_token)
