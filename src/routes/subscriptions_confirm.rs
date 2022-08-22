@@ -3,9 +3,19 @@ use sqlx::PgPool;
 use tracing::{instrument, log::error};
 use uuid::Uuid;
 
+use crate::domain::SubscriptionToken;
+
 #[derive(serde::Deserialize)]
 pub struct Params {
     subscription_token: String,
+}
+
+impl TryFrom<Params> for SubscriptionToken {
+    type Error = String;
+
+    fn try_from(value: Params) -> Result<Self, Self::Error> {
+        SubscriptionToken::parse(value.subscription_token)
+    }
 }
 
 #[instrument(name = "Confirm a pending subscriber", skip(parameters))]
@@ -22,9 +32,7 @@ pub async fn confirm(pool: web::Data<PgPool>, parameters: web::Query<Params>) ->
                 HttpResponse::Ok().finish()
             }
         }
-        Err(_) => {
-            HttpResponse::InternalServerError().finish()
-        },
+        Err(_) => return HttpResponse::InternalServerError().finish(),
     }
 }
 

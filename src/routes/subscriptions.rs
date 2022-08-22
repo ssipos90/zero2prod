@@ -1,12 +1,11 @@
 use actix_web::{web, HttpResponse, Responder};
 use chrono::Utc;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{error, instrument};
 use uuid::Uuid;
 
 use crate::{
-    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    domain::{NewSubscriber, SubscriberEmail, SubscriberName, SubscriptionToken},
     email_client::EmailClient,
     startup::ApplicationBaseUrl,
 };
@@ -81,9 +80,9 @@ pub async fn subscribe(
                 },
             };
 
-            let subscription_token = generate_subscription_token();
+            let subscription_token = SubscriptionToken::generate();
 
-            if store_token(&mut transaction, subscriber_id, &subscription_token)
+            if store_token(&mut transaction, subscriber_id, subscription_token.as_ref())
                 .await
                 .is_err()
             {
@@ -94,7 +93,7 @@ pub async fn subscribe(
                 return HttpResponse::InternalServerError().finish();
             };
 
-            subscription_token
+            subscription_token.as_ref().to_string()
         }
         Err(_) => {
             return HttpResponse::InternalServerError().finish()
@@ -186,13 +185,4 @@ pub async fn send_confirmation_email(
             ),
         )
         .await
-}
-
-fn generate_subscription_token() -> String {
-    let mut rng = thread_rng();
-
-    std::iter::repeat_with(|| rng.sample(Alphanumeric))
-        .map(char::from)
-        .take(25)
-        .collect()
 }
