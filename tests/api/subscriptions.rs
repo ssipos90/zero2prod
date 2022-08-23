@@ -198,3 +198,20 @@ async fn re_subscribe_sends_same_confirmation_email() {
 
     assert_eq!(first_confirmation_links.plain_text, second_confirmation_links.plain_text);
 }
+
+#[actix_web::test]
+async fn subscribe_fails_if_there_is_a_fatal_database_error() {
+    let app = spawn_app().await;
+
+    // given
+    let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
+
+    sqlx::query!("ALTER TABLE subscriptions DROP COLUMN email;",)
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+
+    let response = app.post_subscriptions(body.into()).await;
+
+    assert_eq!(response.status().as_u16(), 500);
+}
