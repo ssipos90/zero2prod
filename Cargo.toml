@@ -31,6 +31,7 @@ rand = { version = "0.8.5", features = ["std_rng"] }
 thiserror = "1.0.32"
 anyhow = "1.0.62"
 base64 = "0.13.0"
+argon2 = { version = "0.4.1", features = ["std"] }
 
 [dependencies.uuid]
 version = "0.8.2"

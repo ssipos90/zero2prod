@@ -5,6 +5,7 @@ use actix_http::{
 };
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 
@@ -92,26 +93,55 @@ pub async fn publish_newsletter(
     Ok(HttpResponse::Ok().finish())
 }
 
+#[tracing::instrument(skip(credentials, pool))]
 async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool,
 ) -> Result<uuid::Uuid, PublishError> {
-    sqlx::query!(
+    let (user_id, expected_password_hash) = get_stored_credentials(&credentials.username, pool)
+        .await
+        .map_err(PublishError::Unexpected)?
+        .ok_or_else(|| PublishError::Auth(anyhow::anyhow!("Unknown username.")))?;
+
+    let expected_hash = PasswordHash::new(expected_password_hash.expose_secret())
+        .context("Failed to parse hash in PHC string format.")
+        .map_err(PublishError::Unexpected)?;
+
+    tokio::task::spawn_blocking(move || {
+        tracing::info_span!("Verify password hash").in_scope(|| {
+            Argon2::default().verify_password(
+                credentials.password.expose_secret().as_bytes(),
+                &expected_hash,
+            )
+        })
+    })
+    .await
+    .context("Failed to spawn a blocking task.")
+    .map_err(PublishError::Unexpected)?
+    .context("Invalid password.")
+    .map_err(PublishError::Unexpected)?;
+    Ok(user_id)
+}
+
+#[tracing::instrument(skip(username, pool))]
+async fn get_stored_credentials(
+    username: &str,
+    pool: &PgPool,
+) -> Result<Option<(uuid::Uuid, Secret<String>)>, anyhow::Error> {
+    let user = sqlx::query!(
         r#"
-        SELECT user_id
+        SELECT user_id,password_hash
         FROM users
-        WHERE username = $1 AND password = $2
+        WHERE username = $1
         "#,
-        credentials.username,
-        credentials.password.expose_secret()
+        username,
     )
     .fetch_optional(pool)
     .await
-    .context("Failed to query credentials")
-    .map_err(PublishError::Unexpected)?
-    .map(|row| row.user_id)
-    .ok_or_else(|| anyhow::anyhow!("Invalid username or password."))
-    .map_err(PublishError::Auth)
+    .context("Failed to retrieve stored credentials.")?
+    .map(|row| (row.user_id, Secret::new(row.password_hash)));
+
+    Ok(user)
 }
 
 struct Credentials {
