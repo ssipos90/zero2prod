@@ -26,13 +26,13 @@ pub async fn confirm(pool: web::Data<PgPool>, parameters: web::Query<Params>) ->
             if used {
                 HttpResponse::Gone().finish()
             } else {
-                if confirm_subscriber(&pool, subscriber_id).await.is_err() {
-                    return HttpResponse::InternalServerError().finish();
+                match confirm_subscriber(&pool, subscriber_id).await {
+                    Ok(_) => HttpResponse::Ok().finish(),
+                    Err(_) => HttpResponse::InternalServerError().finish(),
                 }
-                HttpResponse::Ok().finish()
             }
         }
-        Err(_) => return HttpResponse::InternalServerError().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 

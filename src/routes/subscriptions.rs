@@ -11,6 +11,8 @@ use crate::{
     startup::ApplicationBaseUrl,
 };
 
+use crate::routes::error_chain_fmt;
+
 #[derive(serde::Deserialize)]
 pub struct SubscribeForm {
     email: String,
@@ -163,12 +165,6 @@ pub async fn insert_subscriber(
         e
     })?;
 
-    let rows = sqlx::query!("SELECT * FROM subscriptions;",)
-        .fetch_all(transaction.acquire().await?)
-        .await?;
-
-    println!("{:?}", rows);
-
     Ok(subscriber_id)
 }
 
@@ -207,7 +203,7 @@ pub async fn send_confirmation_email(
 
     email_client
         .send_email(
-            subscriber.email,
+            &subscriber.email,
             "Welcome!",
             &format!(
                 "Welcome to our newsletter!<br/>\
@@ -220,17 +216,4 @@ pub async fn send_confirmation_email(
             ),
         )
         .await
-}
-
-fn error_chain_fmt(
-    e: &impl std::error::Error,
-    f: &mut std::fmt::Formatter<'_>,
-) -> std::fmt::Result {
-    writeln!(f, "{}\n", e)?;
-    let mut current = e.source();
-    while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{}", cause)?;
-        current = cause.source();
-    }
-    Ok(())
 }

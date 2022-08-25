@@ -73,6 +73,15 @@ impl TestApp {
             plain_text: get_link(body["textContent"].as_str().unwrap()),
         }
     }
+
+    pub async fn post_newsletter(&self, body: serde_json::Value) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/newsletters", &self.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
