@@ -116,6 +116,25 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::Confirm
     app.get_confirmation_links(email_request)
 }
 
+#[actix_web::test]
+async fn requests_missing_authorization_are_rejected() {
+    let app = spawn_app().await;
+    let response = reqwest::Client::new()
+        .post(&format!("{}/newsletters", &app.address))
+        .json(&serde_json::json!({
+            "title": "Newsletter title!",
+            "content": {
+                "text": "Newsletter body as plaintext",
+                "html": "<p>Newsletter body as html</>",
+            }
+        }))
+        .send()
+        .await
+        .expect("Failed to execute request");
+    assert_eq!(401, response.status().as_u16());
+    assert_eq!(r#"Basic realm="publish""#, response.headers()["WWW-Authenticate"]);
+}
+
 async fn create_confirmed_subscriber(app: &TestApp) {
     let confirmation_links= create_unconfirmed_subscriber(app).await;
 

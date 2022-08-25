@@ -2605,6 +2605,7 @@ dependencies = [
  "actix-http",
  "actix-web",
  "anyhow",
+ "base64",
  "chrono",
  "claim",
  "dotenv",
