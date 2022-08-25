@@ -1,20 +1,18 @@
-POST https://mandrillapp.com/api/1.0/messages/send
-Authorization: Bearer 
-Content-Type: application/json
+POST {{EMAIL_CLIENT_BASE_URL}}/email
+api-key:"{{EMAIL_CLIENT_AUTHORIZATION_TOKEN}}"
 
 {
-  "key": "{{EMAIL_CLIENT_AUTHORIZATION_TOKEN}}",
-  "message": {
     "to": [
       {
-        "email": "null@ssipos.ro",
+        "email": "sebastiansipos90@gmail.com",
         "name": "Sebastian Sipos"
       }
     ],
-    "from_email": "zero2prod@ssipos.ro",
-    "from_name": "Zero2Prod - Ssipos",
+    "sender": {
+        "email": "zero2prod@ssipos.ro",
+        "name": "Zero2Prod - Ssipos"
+    },
     "subject": "Hello, World!",
-    "text": "Hello from Mailchimp",
-    "html": "<p>Hello from Mailchimp!</p>"
-  }
+    "textContent": "Hello from zero2prod",
+    "htmlContent": "<p>Hello from zero2prod!</p>"
 }

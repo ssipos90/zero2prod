@@ -69,8 +69,8 @@ impl TestApp {
         };
 
         ConfirmationLinks {
-            html: get_link(body["message"]["html"].as_str().unwrap()),
-            plain_text: get_link(body["message"]["text"].as_str().unwrap()),
+            html: get_link(body["htmlContent"].as_str().unwrap()),
+            plain_text: get_link(body["textContent"].as_str().unwrap()),
         }
     }
 }

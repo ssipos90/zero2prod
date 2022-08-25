@@ -32,27 +32,28 @@ impl EmailClient {
         html_content: &str,
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
-        let url = format!("{}/send", self.base_url);
-        let recepient = SendEmailMessageRecepient {
-            email: recipient.as_ref(),
-            name: "Test",
-        };
+        let url = format!("{}/email", self.base_url);
 
-        let request_body = SendEmailMessageRequest {
-            key: self.authorization_token.expose_secret(),
-            message: SendEmailMessageDetails {
-                to: [recepient],
-                from_email: self.sender.as_ref(),
-                from_name: self.sender.as_ref(),
-                subject,
-                html: html_content,
-                text: text_content,
+        let request_body = SendEmailMessage {
+            to: [SendEmailAddress{
+                email: recipient.as_ref(),
+                name: "Test",
+            }],
+            sender: SendEmailAddress {
+              email: self.sender.as_ref(),
+              name: self.sender.as_ref(),
             },
+            subject,
+            html_content,
+            text_content,
         };
 
         let _builder = self
             .http_client
             .post(&url)
+            .header("api-key", self.authorization_token.expose_secret())
+            .header("accept", "application/json")
+            .header("content-type", "application/json")
             .json(&request_body)
             .send()
             .await?
@@ -63,25 +64,19 @@ impl EmailClient {
 }
 
 #[derive(serde::Serialize)]
-struct SendEmailMessageRecepient<'a> {
+struct SendEmailAddress<'a> {
     email: &'a str,
     name: &'a str,
 }
 
 #[derive(serde::Serialize)]
-struct SendEmailMessageDetails<'a> {
-    from_email: &'a str,
-    from_name: &'a str,
-    to: [SendEmailMessageRecepient<'a>; 1],
+#[serde(rename_all = "camelCase")]
+struct SendEmailMessage<'a> {
+    sender: SendEmailAddress<'a>,
+    to: [SendEmailAddress<'a>; 1],
     subject: &'a str,
-    html: &'a str,
-    text: &'a str,
-}
-
-#[derive(serde::Serialize)]
-struct SendEmailMessageRequest<'a> {
-    key: &'a str,
-    message: SendEmailMessageDetails<'a>,
+    html_content: &'a str,
+    text_content: &'a str,
 }
 
 #[cfg(test)]
@@ -107,18 +102,11 @@ mod tests {
         fn matches(&self, request: &Request) -> bool {
             let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
             if let Ok(body) = result {
-                match body.get("message") {
-                    Some(message) => {
-                        message.get("from_email").is_some()
-                            && message.get("from_name").is_some()
-                            && message.get("to").is_some()
-                            && message.get("subject").is_some()
-                            && message.get("html").is_some()
-                            && message.get("text").is_some()
-                            && message.get("to").is_some()
-                    }
-                    None => false,
-                }
+                body.get("sender").is_some()
+                    && body.get("to").is_some()
+                    && body.get("subject").is_some()
+                    && body.get("htmlContent").is_some()
+                    && body.get("textContent").is_some()
             } else {
                 false
             }
@@ -133,7 +121,7 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(header("Content-Type", "application/json"))
-            .and(path("/send"))
+            .and(path("/email"))
             .and(SendEmailBodyMatcher)
             .respond_with(ResponseTemplate::new(200))
             .expect(1) // Then

@@ -12,7 +12,7 @@ async fn subscriber_returns_a_200_for_valid_form_data() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -33,7 +33,7 @@ async fn subscribe_persists_the_new_subscriber() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -130,7 +130,7 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -145,7 +145,7 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -168,7 +168,7 @@ async fn re_subscribe_sends_same_confirmation_email() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -183,7 +183,7 @@ async fn re_subscribe_sends_same_confirmation_email() {
 
     app.email_server.reset().await;
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)

@@ -26,7 +26,7 @@ async fn link_returned_by_subscribe_returns_a_200_if_called() {
     // given
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -51,7 +51,7 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     let app = spawn_app().await;
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
@@ -97,7 +97,7 @@ async fn clicking_again_on_the_confirmation_link_returns_gone() {
     let app = spawn_app().await;
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
-    Mock::given(path("/send"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
