@@ -1,5 +1,5 @@
 use actix_web::{dev::Server, web, App, HttpServer};
-use secrecy::ExposeSecret;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
@@ -7,7 +7,7 @@ use tracing_actix_web::TracingLogger;
 use crate::{
     configuration::Settings,
     email_client::EmailClient,
-    routes::{health_check, subscribe, confirm, publish_newsletter},
+    routes::{confirm, health_check, home, login, login_form, publish_newsletter, subscribe},
 };
 
 pub struct ApplicationBaseUrl(pub String);
@@ -16,7 +16,7 @@ pub fn run(
     listener: TcpListener,
     pool: PgPool,
     email_client: EmailClient,
-    base_url: String
+    base_url: String,
 ) -> Result<Server, std::io::Error> {
     let db_pool = web::Data::new(pool);
     let email_client = web::Data::new(email_client);
@@ -25,6 +25,9 @@ pub fn run(
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
+            .route("/", web::get().to(home))
+            .route("/login", web::get().to(login_form))
+            .route("/login", web::post().to(login))
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
@@ -38,6 +41,9 @@ pub fn run(
 
     Ok(server)
 }
+
+#[derive(Clone)]
+pub struct HmacSecret(pub Secret<String>);
 
 pub struct Application {
     pub port: u16,
@@ -73,13 +79,10 @@ impl Application {
             listener,
             pool,
             email_client,
-            configuration.application.base_url
+            configuration.application.base_url,
         )?;
 
-        Ok(Self {
-            port,
-            server
-        })
+        Ok(Self { port, server })
     }
 
     pub fn port(&self) -> u16 {

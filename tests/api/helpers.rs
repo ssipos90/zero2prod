@@ -1,4 +1,4 @@
-use argon2::{password_hash::SaltString, Argon2, PasswordHasher, Algorithm, Version, Params};
+use argon2::{password_hash::SaltString, Algorithm, Argon2, Params, PasswordHasher, Version};
 use dotenv::from_filename;
 use once_cell::sync::Lazy;
 use secrecy::{ExposeSecret, Secret};
@@ -82,6 +82,32 @@ impl TestApp {
             .await
             .expect("Failed to execute request")
     }
+
+    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap()
+            .post(format!("{}/login", &self.address))
+            .form(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn get_login_html(&self) -> String {
+        reqwest::Client::new()
+            .get(format!("{}/login", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+            .text()
+            .await
+            .unwrap()
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -133,6 +159,11 @@ pub async fn spawn_app() -> TestApp {
     test_app
 }
 
+pub fn assert_is_redirect_to(response: &reqwest::Response, location: &str) {
+    assert_eq!(response.status().as_u16(), 303);
+    assert_eq!(response.headers().get("Location").unwrap(), location);
+}
+
 pub struct TestUser {
     pub user_id: Uuid,
     pub username: String,
@@ -156,9 +187,9 @@ impl TestUser {
             Version::V0x13,
             Params::new(15000, 2, 1, None).unwrap(),
         )
-            .hash_password(self.password.as_bytes(), &salt)
-            .unwrap()
-            .to_string();
+        .hash_password(self.password.as_bytes(), &salt)
+        .unwrap()
+        .to_string();
 
         sqlx::query!(
             "INSERT INTO users (user_id, username, password_hash) VALUES ($1, $2, $3);",
@@ -166,9 +197,9 @@ impl TestUser {
             self.username,
             password_hash
         )
-            .execute(pool)
-            .await
-            .expect("Failed to store the test user");
+        .execute(pool)
+        .await
+        .expect("Failed to store the test user");
     }
 }
 

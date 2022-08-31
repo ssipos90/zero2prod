@@ -11,10 +11,11 @@ pub struct EmailClientSettings {
     pub timeout_milliseconds: u64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct ApplicationSettings {
     pub address: String,
     pub base_url: String,
+    pub hmac_secret: Secret<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -47,7 +48,8 @@ pub fn get_configuration() -> Result<Settings, Error> {
                     .parse::<u16>()
                     .expect("PORT cannot be parsed as u16"))
             ),
-            base_url: var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1".to_string())
+            base_url: var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1".to_string()),
+            hmac_secret: Secret::new(var("HMAC_SECRET").expect("HMAC_SECRET is missing")),
         },
         email_client: EmailClientSettings {
             authorization_token: Secret::new(
