@@ -6,7 +6,7 @@ use zero2prod::{
 };
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> anyhow::Result<()> {
     let configuration = get_configuration().unwrap();
 
     let subscriber = get_subscriber("zero2prod".into(), "info".into(), stdout);

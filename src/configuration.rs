@@ -23,6 +23,7 @@ pub struct Settings {
     pub database_url: Secret<String>,
     pub application: ApplicationSettings,
     pub email_client: EmailClientSettings,
+    pub redis_uri: Secret<String>,
 }
 
 impl EmailClientSettings {
@@ -40,6 +41,7 @@ pub fn get_configuration() -> Result<Settings, Error> {
 
     Ok(Settings {
         database_url: Secret::new(var("DATABASE_URL").expect("DATABASE_URL missing")),
+        redis_uri: Secret::new(var("REDIS_URI").expect("REDIS_URI missing")),
         application: ApplicationSettings {
             address: format!(
                 "{}:{}",
