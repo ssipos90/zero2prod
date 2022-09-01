@@ -1,5 +1,6 @@
 use actix_http::{header::LOCATION, StatusCode};
-use actix_web::{web, HttpResponse, ResponseError, error::InternalError, cookie::Cookie};
+use actix_web::{error::InternalError, web, HttpResponse, ResponseError};
+use actix_web_flash_messages::FlashMessage;
 use secrecy::Secret;
 use sqlx::PgPool;
 
@@ -42,9 +43,9 @@ pub async fn login(
                 AuthError::InvalidCredentials(_) => LoginError::Auth(e.into()),
                 AuthError::Unexpected(_) => LoginError::Unexpected(e.into()),
             };
+            FlashMessage::error(e.to_string()).send();
             let response = HttpResponse::SeeOther()
                 .insert_header((LOCATION, "/login"))
-                .cookie(Cookie::new("_flash", e.to_string()))
                 .finish();
             Err(InternalError::from_response(e, response))
         }
