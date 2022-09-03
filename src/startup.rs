@@ -1,4 +1,4 @@
-use actix_session::{SessionMiddleware, storage::RedisSessionStore};
+use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, dev::Server, web, App, HttpServer};
 use actix_web_flash_messages::{storage::CookieMessageStore, FlashMessagesFramework};
 use secrecy::{ExposeSecret, Secret};
@@ -9,7 +9,10 @@ use tracing_actix_web::TracingLogger;
 use crate::{
     configuration::Settings,
     email_client::EmailClient,
-    routes::{confirm, health_check, home, login, login_form, publish_newsletter, subscribe},
+    routes::{
+        admin_dashboard, confirm, health_check, home, login, login_form, publish_newsletter,
+        subscribe,
+    },
 };
 
 pub struct ApplicationBaseUrl(pub String);
@@ -35,7 +38,10 @@ pub async fn run(
     let server = HttpServer::new(move || {
         App::new()
             .wrap(message_framework.clone())
-            .wrap(SessionMiddleware::new(redis_store.clone(), secret_key.clone()))
+            .wrap(SessionMiddleware::new(
+                redis_store.clone(),
+                secret_key.clone(),
+            ))
             .wrap(TracingLogger::default())
             .route("/", web::get().to(home))
             .route("/login", web::get().to(login_form))
@@ -44,6 +50,7 @@ pub async fn run(
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
+            .route("/admin/dashboard", web::get().to(admin_dashboard))
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
@@ -93,8 +100,9 @@ impl Application {
             email_client,
             configuration.application.base_url,
             configuration.application.hmac_secret,
-            configuration.redis_uri
-        ).await?;
+            configuration.redis_uri,
+        )
+        .await?;
 
         Ok(Self { port, server })
     }
