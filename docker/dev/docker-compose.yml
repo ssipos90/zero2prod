@@ -1,26 +1,38 @@
 services:
   serve:
-    build: .
+    extends: base
     env_file:
-      - ../../.env
+      - ./.env.serve
     networks:
-      - postgres
       - proxy
-    volumes:
-      - $HOME/.cargo:/home/app/.cargo
-      - ../../:/app/
+    profiles:
+      - default
+
   test:
-    build: .
+    extends: base
+    command:
+      - test
     env_file:
-      - ../../.env.testing
-    networks:
-      - postgres
-    volumes_from:
-      - serve
+      - ./.env.test
     profiles:
       - test
+
+  base:
+    build: .
+    networks:
+      - default
+      - postgres
+    profiles:
+      - dummy
+    volumes:
+      - ../../:/home/app/app
+      - cargo:/home/app/.cargo
+
   redis6:
     image: redis:6-alpine
+
+volumes:
+  cargo:
 
 networks:
   proxy:

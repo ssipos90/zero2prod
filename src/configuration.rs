@@ -1,5 +1,6 @@
-use dotenv::{dotenv, var, Error};
+use dotenv::{dotenv, Error};
 use secrecy::Secret;
+use std::env::var;
 
 use crate::domain::SubscriberEmail;
 

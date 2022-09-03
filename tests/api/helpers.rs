@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::{env, io};
+use url::Url;
 use uuid::Uuid;
 use wiremock::MockServer;
 use zero2prod::{
@@ -14,6 +15,7 @@ use zero2prod::{
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     from_filename(".env.testing").ok();
+
     let default_filter_level = "info".to_string();
     let subscriber_name = "test".to_string();
 
@@ -118,13 +120,12 @@ pub async fn spawn_app() -> TestApp {
     let configuration = {
         let mut c = get_configuration().expect("Failed to load configuration.");
 
-        configure_database(&c.database_url, &database_name).await;
+        let mut database_url =
+            Url::parse(c.database_url.expose_secret()).expect("Failed to parse database_url");
+        database_url.set_path("");
+        let database_url: String = database_url.into();
 
-        c.database_url = Secret::new(format!(
-            "{}/{}",
-            c.database_url.expose_secret(),
-            &database_name
-        ));
+        c.database_url = Secret::new(configure_database(&database_url, &database_name).await);
 
         c.email_client.base_url = email_server.uri();
 
@@ -158,7 +159,7 @@ pub async fn spawn_app() -> TestApp {
         address,
         port,
         test_user: TestUser::generate(),
-        api_client: client
+        api_client: client,
     };
     test_app.test_user.store(&test_app.db_pool).await;
 
@@ -209,11 +210,10 @@ impl TestUser {
     }
 }
 
-async fn configure_database(database_url: &Secret<String>, database_name: &str) {
-    let database_url = database_url.expose_secret();
+async fn configure_database(database_url: &str, database_name: &str) -> String {
     let mut connection = PgConnection::connect(database_url)
         .await
-        .expect("Failed to connect to DB");
+        .expect("Failed to connect to Postgres");
 
     connection
         .execute(sqlx::query(&format!(
@@ -223,7 +223,8 @@ async fn configure_database(database_url: &Secret<String>, database_name: &str) 
         .await
         .expect("Failed to create the DB.");
 
-    let db_pool = PgPool::connect(format!("{}/{}", &database_url, &database_name).as_str())
+    let database_url = format!("{}/{}", database_url, database_name);
+    let db_pool = PgPool::connect(&database_url)
         .await
         .expect("Failed to connect to DB");
 
@@ -231,4 +232,6 @@ async fn configure_database(database_url: &Secret<String>, database_name: &str) 
         .run(&db_pool)
         .await
         .expect("Failed to migrate DB.");
+
+    database_url
 }

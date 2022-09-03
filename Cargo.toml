@@ -33,6 +33,19 @@ unicode-segmentation = "1.9.0"
 validator = "0.14.0"
 actix-web-flash-messages = { version = "0.4.1", features = ["cookies"] }
 actix-session = { version = "0.7.1", features = ["redis-rs-tls-session"] }
+url = "2.2.2"
+
+[dependencies.sqlx]
+version = "0.6.1"
+features = [
+  "chrono",
+  "macros",
+  "migrate",
+  "offline",
+  "postgres",
+  "runtime-actix-rustls",
+  "uuid"
+]
 
 [dependencies.reqwest]
 version = "0.11.10"
@@ -40,21 +53,8 @@ default-features = false
 features = ["json", "rustls-tls", "cookies"]
 
 [dependencies.uuid]
-version = "0.8.2"
+version = "1.1.2"
 features = ["v4"]
-
-[dependencies.sqlx]
-version = "0.5.11"
-default-features = false
-features = [
-  "runtime-actix-rustls",
-  "macros",
-  "postgres",
-  "uuid",
-  "chrono",
-  "migrate",
-  "offline"
-]
 
 [dev-dependencies]
 claim = "0.5.0"
