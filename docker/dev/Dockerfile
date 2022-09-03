@@ -3,14 +3,12 @@ FROM rust:slim
 RUN set -eu; \
     apt-get update; \
     apt-get install -y \
+      librust-openssl-sys-dev \
       ca-certificates \
       clang \
-      libssl-dev \
       lld \
       openssl \
       ;
-
-RUN apt-get -y install --no-install-recommends librust-openssl-sys-dev
 
 ARG UID=1000
 ARG GID=1000

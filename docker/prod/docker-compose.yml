@@ -1,12 +1,13 @@
 services:
   zero2prod:
-    build: .
+    image: ssipos/zero2prod:latest
     container_name: zero2prod
-    env_file:
-      - .env.production
     networks:
       - postgres
       - proxy
+
+  redis6:
+    image: redis:6-alpine
 
 networks:
   proxy:

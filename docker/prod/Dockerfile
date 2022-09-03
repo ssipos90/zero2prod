@@ -1,10 +1,13 @@
-FROM rust:1.59 as planner
+FROM rust:1.63-slim as planner
 
 RUN set -eu; \
     apt-get update; \
     apt-get install -y \
+      librust-openssl-sys-dev \
+      ca-certificates \
       clang \
       lld \
+      openssl \
       ;
 
 RUN useradd -d /app -m app
@@ -35,8 +38,7 @@ RUN set -eu; \
       ca-certificates \
       openssl; \
     apt-get autoremove -y; \
-    apt-get clean -y; \
-    rm -rf /var/lib/apt/lists/
+    apt-get clean -y
 
 RUN useradd -d /app app
 

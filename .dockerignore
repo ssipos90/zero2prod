@@ -1,5 +1,4 @@
-.git
-.env*
-target
-docker-compose.yml
-Dockerfile
+/.git
+/.env*
+/target
+/docker
