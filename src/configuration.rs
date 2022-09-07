@@ -46,7 +46,7 @@ pub fn get_configuration() -> Result<Settings, Error> {
         application: ApplicationSettings {
             address: format!(
                 "{}:{}",
-                var("HTTP_INTERFACE").unwrap_or_else(|_| "127.0.0.1".to_string()),
+                var("HTTP_INTERFACE").unwrap_or_else(|_| "0.0.0.0".to_string()),
                 var("HTTP_PORT").map_or(8000, |v| v
                     .parse::<u16>()
                     .expect("PORT cannot be parsed as u16"))

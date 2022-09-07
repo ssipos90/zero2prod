@@ -3,21 +3,18 @@ use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::session_state::TypedSession;
+use crate::{session_state::TypedSession, utils::{e500, see_other}};
 
 pub async fn admin_dashboard(
     pool: web::Data<PgPool>,
     session: TypedSession,
 ) -> actix_web::Result<HttpResponse> {
-    let username = if let Some(user_id) = session
-        .get_user_id()
-        .map_err(ErrorInternalServerError)?
-    {
+    let username = if let Some(user_id) = session.get_user_id().map_err(ErrorInternalServerError)? {
         get_username(&user_id, &pool)
             .await
-            .map_err(ErrorInternalServerError)?
+            .map_err(e500)?
     } else {
-        todo!()
+        return Ok(see_other("/login"));
     };
     Ok(HttpResponse::Ok()
         .content_type(ContentType::html())
@@ -30,6 +27,9 @@ pub async fn admin_dashboard(
     </head>
     <body>
         <p>Welcome, {username}!</p>
+        <ol>
+          <li><a href="/admin/password">Change password</a></li>
+        </ol>
     </body>
 </html>
             "#

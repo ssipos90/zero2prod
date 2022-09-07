@@ -15,7 +15,7 @@ use sqlx::PgPool;
 
 #[derive(thiserror::Error)]
 pub enum PublishError {
-    #[error("Authentication failed.")]
+    #[error("Authentication failed")]
     Auth(#[source] anyhow::Error),
 
     #[error(transparent)]

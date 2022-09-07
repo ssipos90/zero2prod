@@ -34,13 +34,21 @@ async fn redirect_to_admin_dashboard_after_successful_login() {
         "password": app.test_user.password,
     });
 
+    println!("{}", &login_body);
+
     let response = app.post_login(&login_body).await;
 
     // then the response should redirect us to the login page
     assert_is_redirect_to(&response, "/admin/dashboard");
 
+    let r2 = app.get_admin_dashboard().await;
+    eprintln!("{:?}", r2.headers().get("Location"));
+
+    r2.cookies().for_each(|c| {
+        eprintln!("Cookie: {}, {}", c.name(), c.value());
+    });
     // when we load the admin dashboard
-    let html_page = app.get_admin_dashboard().await;
+    let html_page = app.get_admin_dashboard_html().await;
 
     // then we see the welcome message
     assert!(html_page.contains(r#"Welcome"#));
