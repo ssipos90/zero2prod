@@ -1,5 +1,4 @@
-use actix_http::StatusCode;
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{web, http::StatusCode, HttpResponse, ResponseError};
 use anyhow::Context;
 use chrono::Utc;
 use sqlx::{Acquire, PgPool, Postgres, Transaction};

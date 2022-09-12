@@ -16,6 +16,7 @@ async fn an_error_flash_message_is_set_on_failure() {
 
     // when loading the login form
     let html_page = app.get_login_html().await;
+
     // then we see the error message
     assert!(html_page.contains(r#"<p><i>Authentication failed</i></p>"#));
 

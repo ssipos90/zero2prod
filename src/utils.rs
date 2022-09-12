@@ -1,5 +1,5 @@
-use actix_http::header::LOCATION;
 use actix_web::HttpResponse;
+use actix_web::http::header::LOCATION;
 use actix_web_flash_messages::IncomingFlashMessages;
 
 pub fn e500<T>(e: T) -> actix_web::Error
@@ -15,8 +15,12 @@ pub fn see_other(location: &str) -> HttpResponse {
         .finish()
 }
 
+#[tracing::instrument(skip(flash_messages))]
 pub fn html_errors(flash_messages: &IncomingFlashMessages) -> String {
     flash_messages
         .iter()
-        .fold(String::new(), |a, m| format!("{}<p><i>{}</i></p>", a, m.content()))
+        .fold(String::new(), |a, m| {
+            tracing::debug!("message: {}", m.content());
+            format!("{}<p><i>{}</i></p>", a, m.content())
+        })
 }

@@ -5,7 +5,7 @@ use crate::utils::html_errors;
 
 #[tracing::instrument(skip(flash_messages))]
 pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
-    let msg_html = html_errors(&flash_messages);
+     let msg_html = html_errors(&flash_messages);
 
     HttpResponse::Ok()
         .content_type(ContentType::html())

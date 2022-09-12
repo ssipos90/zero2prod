@@ -4,11 +4,13 @@ use crate::{
     email_client::EmailClient,
     routes::error_chain_fmt,
 };
-use actix_http::{
-    header::{self, HeaderMap, HeaderValue},
-    StatusCode,
+use actix_web::{
+    http::{
+        header::{self, HeaderMap, HeaderValue},
+        StatusCode,
+    },
+    web, HttpRequest, HttpResponse, ResponseError, body::BoxBody,
 };
-use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
 use secrecy::Secret;
 use sqlx::PgPool;
@@ -35,7 +37,7 @@ impl ResponseError for PublishError {
             Self::Unexpected(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
-    fn error_response(&self) -> HttpResponse<actix_http::body::BoxBody> {
+    fn error_response(&self) -> HttpResponse<BoxBody> {
         match self {
             Self::Unexpected(_) => HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR),
             Self::Auth(_) => {
