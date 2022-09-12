@@ -29,11 +29,6 @@ static TRACING: Lazy<()> = Lazy::new(|| {
     }
 });
 
-pub struct ConfirmationLinks {
-    pub html: reqwest::Url,
-    pub plain_text: reqwest::Url,
-}
-
 pub struct TestApp {
     pub address: String,
     pub port: u16,
@@ -41,6 +36,11 @@ pub struct TestApp {
     pub email_server: MockServer,
     pub test_user: TestUser,
     pub api_client: reqwest::Client,
+}
+
+pub struct ConfirmationLinks {
+    pub html: reqwest::Url,
+    pub plain_text: reqwest::Url,
 }
 
 impl TestApp {
@@ -128,29 +128,28 @@ impl TestApp {
         Body: serde::Serialize,
     {
         self.api_client
-            .post(format!("{}/login", &self.address))
+            .post(&format!("{}/login", &self.address))
             .form(body)
             .send()
             .await
             .expect("Failed to execute request.")
     }
 
-    pub async fn get_login_html(&self) -> String {
+    pub async fn get_login(&self) -> reqwest::Response {
         self.api_client
-            .get(format!("{}/login", &self.address))
+            .get(&format!("{}/login", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
-            .text()
-            .await
-            .unwrap()
+    }
+
+    pub async fn get_login_html(&self) -> String {
+        self.get_login().await.text().await.unwrap()
     }
 }
 
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
-
-    let database_name = Uuid::new_v4().to_string();
 
     let email_server = MockServer::start().await;
 
@@ -162,7 +161,8 @@ pub async fn spawn_app() -> TestApp {
         database_url.set_path("");
         let database_url: String = database_url.into();
 
-        c.database_url = Secret::new(configure_database(&database_url, &database_name).await);
+        c.database_url =
+            Secret::new(configure_database(&database_url, &Uuid::new_v4().to_string()).await);
 
         c.email_client.base_url = email_server.uri();
 
@@ -236,7 +236,8 @@ impl TestUser {
         .to_string();
 
         sqlx::query!(
-            "INSERT INTO users (user_id, username, password_hash) VALUES ($1, $2, $3);",
+            "INSERT INTO users (user_id, username, password_hash)
+            VALUES ($1, $2, $3);",
             self.user_id,
             self.username,
             password_hash

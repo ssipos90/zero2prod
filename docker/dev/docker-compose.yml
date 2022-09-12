@@ -34,6 +34,7 @@ services:
       - HMAC_SECRET=${HMAC_SECRET:?err}
       - REDIS_URI=${REDIS_URI:?err}
       - RUST_LOG=${RUST_LOG:-info}
+      - TEST_LOG=${TEST_LOG:-false}
     networks:
       - default
       - postgres
@@ -43,6 +44,8 @@ services:
 
   redis6:
     image: redis:6-alpine
+    ports:
+      - 6379:6379
 
 volumes:
   cargo:

@@ -25,5 +25,6 @@ pub async fn change_password(
         FlashMessage::error("You entered two different passwords!").send();
         return Ok(see_other("/admin/password"));
     }
+    form.0.current_password.expose_secret();
     todo!()
 }

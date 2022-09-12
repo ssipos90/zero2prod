@@ -11,11 +11,15 @@ case "$1" in
     shift
     cargo run -- $@
     ;;
+  test)
+    shift
+    cargo test -- --nocapture $@
+    ;;
   dev)
     shift
     cargo watch --watch-when-idle -x "run $@"
     ;;
-  test)
+  test-dev)
     shift
     cargo watch --watch-when-idle -x "test -- --nocapture $@"
     ;;

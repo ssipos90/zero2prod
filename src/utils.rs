@@ -15,8 +15,8 @@ pub fn see_other(location: &str) -> HttpResponse {
         .finish()
 }
 
-pub fn html_errors(flash_messages: IncomingFlashMessages) -> String {
+pub fn html_errors(flash_messages: &IncomingFlashMessages) -> String {
     flash_messages
         .iter()
-        .fold(String::new(), |a, m| a + &format!("<p><i>{}</i></p>", m.content()))
+        .fold(String::new(), |a, m| format!("{}<p><i>{}</i></p>", a, m.content()))
 }

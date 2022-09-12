@@ -13,7 +13,7 @@ pub async fn change_password_form(
     if session.get_user_id().map_err(e500)?.is_none() {
         return Ok(see_other("/login"));
     }
-    let msg_html = html_errors(flash_messages);
+    let msg_html = html_errors(&flash_messages);
 
     Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
         format!(r#"<!DOCTYPE html>

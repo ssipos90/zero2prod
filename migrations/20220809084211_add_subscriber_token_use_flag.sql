@@ -1,4 +1,3 @@
--- Add up migration script here
 ALTER TABLE subscription_tokens
     ADD COLUMN used BOOLEAN NOT NULL DEFAULT FALSE;
 
