@@ -64,3 +64,7 @@ once_cell = "1.10"
 quickcheck = "0.9"
 quickcheck_macros = "0.9"
 wiremock = "0.5"
+
+#[patch.crates-io]
+#reqwest = { path = "../reqwest" }
+#cookie_store = { path = "../cookie_store" }

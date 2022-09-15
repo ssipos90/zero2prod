@@ -40,18 +40,21 @@ impl EmailClientSettings {
 pub fn get_configuration() -> Result<Settings, Error> {
     dotenv().ok();
 
-    Ok(Settings {
-        database_url: Secret::new(var("DATABASE_URL").expect("DATABASE_URL missing")),
-        redis_uri: Secret::new(var("REDIS_URI").expect("REDIS_URI missing")),
-        application: ApplicationSettings {
-            address: format!(
+    let address = format!(
                 "{}:{}",
                 var("HTTP_INTERFACE").unwrap_or_else(|_| "0.0.0.0".to_string()),
                 var("HTTP_PORT").map_or(8000, |v| v
                     .parse::<u16>()
                     .expect("PORT cannot be parsed as u16"))
-            ),
-            base_url: var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1".to_string()),
+            );
+    let base_url = var("BASE_URL").unwrap_or_else(|_| format!("http://{}", &address));
+
+    Ok(Settings {
+        database_url: Secret::new(var("DATABASE_URL").expect("DATABASE_URL missing")),
+        redis_uri: Secret::new(var("REDIS_URI").expect("REDIS_URI missing")),
+        application: ApplicationSettings {
+            address,
+            base_url,
             hmac_secret: Secret::new(var("HMAC_SECRET").expect("HMAC_SECRET is missing")),
         },
         email_client: EmailClientSettings {
