@@ -36,7 +36,7 @@ pub async fn admin_dashboard(
         )))
 }
 
-async fn get_username(user_id: &Uuid, pool: &PgPool) -> anyhow::Result<String> {
+pub async fn get_username(user_id: &Uuid, pool: &PgPool) -> anyhow::Result<String> {
     let row = sqlx::query!("SELECT * FROM users WHERE user_id=$1", user_id)
         .fetch_one(pool)
         .await
