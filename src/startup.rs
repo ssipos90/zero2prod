@@ -13,7 +13,7 @@ use crate::{
     email_client::EmailClient,
     routes::{
         admin_dashboard, change_password, change_password_form, confirm, health_check, home, login,
-        login_form, logout, publish_newsletter, subscribe,
+        login_form, logout, publish_newsletter, subscribe, publish_newsletter_form,
     }, authentication::reject_anonymous_users,
 };
 
@@ -52,14 +52,15 @@ pub async fn run(
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
-            .route("/newsletters", web::post().to(publish_newsletter))
             .service(
                 web::scope("/admin")
                     .wrap(from_fn(reject_anonymous_users))
                     .route("/dashboard", web::get().to(admin_dashboard))
                     .route("/logout", web::post().to(logout))
                     .route("/password", web::get().to(change_password_form))
-                    .route("/password", web::post().to(change_password)),
+                    .route("/password", web::post().to(change_password))
+                    .route("/newsletters", web::get().to(publish_newsletter_form))
+                    .route("/newsletters", web::post().to(publish_newsletter))
             )
             .app_data(db_pool.clone())
             .app_data(email_client.clone())

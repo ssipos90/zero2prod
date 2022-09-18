@@ -12,6 +12,7 @@ async fn you_must_be_logged_in_to_access_the_admin_dashboard() {
 #[actix_web::test]
 async fn logout_clears_session() {
     let app = spawn_app().await;
+    app.login_test_user().await.unwrap();
 
     let response = app
         .post_login(&serde_json::json!({

@@ -2,7 +2,6 @@ use argon2::{password_hash::SaltString, Algorithm, Argon2, Params, PasswordHashe
 use dotenv::from_filename;
 use once_cell::sync::Lazy;
 use secrecy::{ExposeSecret, Secret};
-use serde::Serialize;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::{env, io};
 use url::Url;
@@ -43,6 +42,16 @@ pub struct ConfirmationLinks {
 }
 
 impl TestApp {
+    pub async fn login_test_user(&self) -> Result<(), reqwest::Error> {
+        self.post_login(&serde_json::json!({
+            "username": self.test_user.username,
+            "password": self.test_user.password,
+        }))
+        .await
+        .error_for_status()?;
+        Ok(())
+    }
+
     pub async fn get_change_password(&self) -> reqwest::Response {
         self.api_client
             .get(&format!("{}/admin/password", &self.address))
@@ -57,7 +66,7 @@ impl TestApp {
 
     pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
     where
-        Body: Serialize,
+        Body: serde::Serialize,
     {
         self.api_client
             .post(&format!("{}/admin/password", &self.address))
@@ -112,14 +121,28 @@ impl TestApp {
         }
     }
 
-    pub async fn post_newsletter(&self, body: serde_json::Value) -> reqwest::Response {
+    pub async fn post_newsletter<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.api_client
-            .post(&format!("{}/newsletters", &self.address))
-            .basic_auth(&self.test_user.username, Some(&self.test_user.password))
-            .json(&body)
+            .post(&format!("{}/admin/newsletters", &self.address))
+            .form(body)
             .send()
             .await
             .expect("Failed to execute request")
+    }
+
+    pub async fn get_newsletter(&self) -> reqwest::Response {
+        self.api_client
+            .get(&format!("{}/admin/newsletters", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+
+    pub async fn get_newsletter_html(&self) -> String {
+        self.get_newsletter().await.text().await.unwrap()
     }
 
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
