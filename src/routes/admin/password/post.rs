@@ -4,9 +4,8 @@ use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 
 use crate::{
-    authentication::{validate_credentials, AuthError, Credentials},
+    authentication::{validate_credentials, AuthError, Credentials, UserId},
     routes::admin::dashboard::get_username,
-    session_state::TypedSession,
     utils::{e500, see_other},
 };
 
@@ -18,16 +17,10 @@ pub struct FormData {
 }
 
 pub async fn change_password(
-    session: TypedSession,
     form: web::Form<FormData>,
     pool: web::Data<PgPool>,
+    user_id: web::ReqData<UserId>
 ) -> Result<HttpResponse, actix_web::Error> {
-    let user_id = match session.get_user_id().map_err(e500)? {
-        Some(user_id) => user_id,
-        None => {
-            return Ok(see_other("/login"));
-        }
-    };
     let new_password = form.0.new_password.expose_secret();
 
     if new_password != form.0.new_password_check.expose_secret() {
@@ -61,7 +54,9 @@ pub async fn change_password(
             AuthError::Unexpected(_) => Err(e500(e)),
         };
     }
-    crate::authentication::change_password(user_id, form.0.new_password, &pool).await.map_err(e500)?;
+    crate::authentication::change_password(&user_id, &form.0.new_password, &pool)
+        .await
+        .map_err(e500)?;
 
     FlashMessage::info("Your password has been changed!").send();
 

@@ -1,21 +1,15 @@
-use actix_web::{error::ErrorInternalServerError, http::header::ContentType, web, HttpResponse};
+use actix_web::{http::header::ContentType, web, HttpResponse};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{session_state::TypedSession, utils::{e500, see_other}};
+use crate::{authentication::UserId, utils::e500};
 
 pub async fn admin_dashboard(
     pool: web::Data<PgPool>,
-    session: TypedSession,
+    user_id: web::ReqData<UserId>,
 ) -> actix_web::Result<HttpResponse> {
-    let username = if let Some(user_id) = session.get_user_id().map_err(ErrorInternalServerError)? {
-        get_username(&user_id, &pool)
-            .await
-            .map_err(e500)?
-    } else {
-        return Ok(see_other("/login"));
-    };
+    let username = get_username(&user_id, &pool).await.map_err(e500)?;
     Ok(HttpResponse::Ok()
         .content_type(ContentType::html())
         .body(format!(

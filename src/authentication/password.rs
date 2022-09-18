@@ -1,6 +1,7 @@
 use anyhow::Context;
 use argon2::{
-    password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version,
+    password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
+    PasswordVerifier, Version,
 };
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
@@ -88,12 +89,13 @@ async fn get_stored_credentials(
 }
 
 #[tracing::instrument(skip(password, pool))]
-pub async fn change_password(
-    user_id: uuid::Uuid,
-    password: Secret<String>,
+pub async fn change_password<'a>(
+    user_id: &uuid::Uuid,
+    password: &Secret<String>,
     pool: &PgPool,
 ) -> Result<(), anyhow::Error> {
-    let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
+    let password = password.clone();
+    let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(&password))
         .await?
         .context("Failed to hash password.")?;
     let result = sqlx::query!(
@@ -115,7 +117,7 @@ pub async fn change_password(
     Ok(())
 }
 
-fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, anyhow::Error> {
+fn compute_password_hash(password: &Secret<String>) -> Result<Secret<String>, anyhow::Error> {
     let salt = SaltString::generate(&mut rand::thread_rng());
 
     let password_hash = Argon2::new(

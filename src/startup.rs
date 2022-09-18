@@ -1,6 +1,8 @@
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, dev::Server, web, App, HttpServer};
 use actix_web_flash_messages::{storage::CookieMessageStore, FlashMessagesFramework};
+use actix_web_lab::middleware::from_fn;
+use anyhow::Context;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::net::TcpListener;
@@ -10,13 +12,14 @@ use crate::{
     configuration::Settings,
     email_client::EmailClient,
     routes::{
-        admin_dashboard, confirm, health_check, home, login, login_form, publish_newsletter,
-        subscribe, change_password, change_password_form, logout
-    },
+        admin_dashboard, change_password, change_password_form, confirm, health_check, home, login,
+        login_form, logout, publish_newsletter, subscribe,
+    }, authentication::reject_anonymous_users,
 };
 
 pub struct ApplicationBaseUrl(pub String);
 
+#[tracing::instrument(skip(listener,pool,email_client,hmac_secret,redis_uri))]
 pub async fn run(
     listener: TcpListener,
     pool: PgPool,
@@ -33,7 +36,7 @@ pub async fn run(
     let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
-    let redis_store = RedisSessionStore::new(redis_uri.expose_secret()).await?;
+    let redis_store = RedisSessionStore::new(redis_uri.expose_secret()).await.context("Cannot connect to redis.")?;
 
     let server = HttpServer::new(move || {
         App::new()
@@ -50,15 +53,20 @@ pub async fn run(
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
-            .route("/admin/dashboard", web::get().to(admin_dashboard))
-            .route("/admin/logout", web::post().to(logout))
-            .route("/admin/password", web::get().to(change_password_form))
-            .route("/admin/password", web::post().to(change_password))
+            .service(
+                web::scope("/admin")
+                    .wrap(from_fn(reject_anonymous_users))
+                    .route("/dashboard", web::get().to(admin_dashboard))
+                    .route("/logout", web::post().to(logout))
+                    .route("/password", web::get().to(change_password_form))
+                    .route("/password", web::post().to(change_password)),
+            )
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
     })
-    .listen(listener)?
+    .listen(listener)
+    .context("Cannot start HTTP server.")?
     .run();
 
     Ok(server)
