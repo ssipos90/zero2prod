@@ -16,7 +16,7 @@ pub fn see_other(location: &str) -> HttpResponse {
 }
 
 #[tracing::instrument(skip(flash_messages))]
-pub fn html_errors(flash_messages: &IncomingFlashMessages) -> String {
+pub fn html_messages(flash_messages: &IncomingFlashMessages) -> String {
     flash_messages
         .iter()
         .fold(String::new(), |a, m| {

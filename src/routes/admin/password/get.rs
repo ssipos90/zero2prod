@@ -3,7 +3,7 @@ use actix_web_flash_messages::IncomingFlashMessages;
 
 use crate::{
     session_state::TypedSession,
-    utils::{e500, html_errors, see_other},
+    utils::{e500, html_messages, see_other},
 };
 
 pub async fn change_password_form(
@@ -13,7 +13,7 @@ pub async fn change_password_form(
     if session.get_user_id().map_err(e500)?.is_none() {
         return Ok(see_other("/login"));
     }
-    let msg_html = html_errors(&flash_messages);
+    let msg_html = html_messages(&flash_messages);
 
     Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
         format!(r#"<!DOCTYPE html>

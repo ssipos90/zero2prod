@@ -45,9 +45,11 @@ pub async fn change_password(
         return Ok(see_other("/admin/password"));
     }
 
+    let current_password = form.0.current_password;
+
     let credentials = Credentials {
         username: get_username(&user_id, &pool).await.map_err(e500)?,
-        password: form.0.current_password,
+        password: current_password.clone(),
     };
 
     if let Err(e) = validate_credentials(credentials, &pool).await {
@@ -59,5 +61,9 @@ pub async fn change_password(
             AuthError::Unexpected(_) => Err(e500(e)),
         };
     }
-    todo!();
+    crate::authentication::change_password(user_id, form.0.new_password, &pool).await.map_err(e500)?;
+
+    FlashMessage::info("Your password has been changed!").send();
+
+    Ok(see_other("/admin/password"))
 }

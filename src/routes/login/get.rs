@@ -1,11 +1,11 @@
 use actix_web::{http::header::ContentType, HttpResponse};
 use actix_web_flash_messages::IncomingFlashMessages;
 
-use crate::utils::html_errors;
+use crate::utils::html_messages;
 
 #[tracing::instrument(skip(flash_messages))]
 pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
-     let msg_html = html_errors(&flash_messages);
+     let msg_html = html_messages(&flash_messages);
 
     HttpResponse::Ok()
         .content_type(ContentType::html())
