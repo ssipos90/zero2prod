@@ -5,6 +5,8 @@ use crate::utils::html_messages;
 
 pub async fn publish_newsletter_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
     let msg_html = html_messages(&flash_messages);
+    let idempotency_key = uuid::Uuid::new_v4();
+
     HttpResponse::Ok()
         .content_type(ContentType::html())
         .body(format!(
@@ -16,7 +18,8 @@ pub async fn publish_newsletter_form(flash_messages: IncomingFlashMessages) -> H
     </head>
     <body>
         {msg_html}
-        <form method="post" action="/admin/publish">
+        <form method="post" action="/admin/newsletters">
+            <input type="hidden" name="idempotency_key" value="{idempotency_key}" />
             <label>Subject
                 <input type="text" placeholder="Enter email subject" name="subject" />
             </label>

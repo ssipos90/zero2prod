@@ -3,7 +3,7 @@ use wiremock::{
     Mock, ResponseTemplate,
 };
 
-use crate::helpers::{spawn_app, TestApp, assert_is_redirect_to};
+use crate::helpers::{assert_is_redirect_to, spawn_app, TestApp};
 
 #[actix_web::test]
 async fn creation_is_idempotent() {
@@ -26,18 +26,14 @@ async fn creation_is_idempotent() {
         "html_content": "<p>Newsletter body as HTML.</p>",
     });
 
-    let response = app
-        .post_newsletter(&newsletter_request_body)
-        .await;
+    let response = app.post_newsletter(&newsletter_request_body).await;
     assert_is_redirect_to(&response, "/admin/newsletters");
 
     let html_page = app.get_newsletter_html().await;
     assert!(html_page.contains("The newsletter issue has been published!"));
 
     // second
-    let response = app
-        .post_newsletter(&newsletter_request_body)
-        .await;
+    let response = app.post_newsletter(&newsletter_request_body).await;
     assert_is_redirect_to(&response, "/admin/newsletters");
     let html_page = app.get_newsletter_html().await;
     assert!(html_page.contains("The newsletter issue has been published!"));
@@ -51,6 +47,7 @@ async fn returns_400_for_invalid_data() {
     let test_cases = vec![
         (
             serde_json::json!({
+                "idempotency_key": uuid::Uuid::new_v4().to_string(),
                 "text_content": "Newsletter body as plain text.",
                 "html_content": "<p>Newsletter body as HTML.</p>",
             }),
@@ -58,6 +55,7 @@ async fn returns_400_for_invalid_data() {
         ),
         (
             serde_json::json!({
+                "idempotency_key": uuid::Uuid::new_v4().to_string(),
                 "title": "Newsletter title",
                 "html_content": "<p>Newsletter body as HTML.</p>",
             }),
@@ -65,6 +63,7 @@ async fn returns_400_for_invalid_data() {
         ),
         (
             serde_json::json!({
+                "idempotency_key": uuid::Uuid::new_v4().to_string(),
                 "title": "Newsletter title",
                 "text_content": "Newsletter body as plain text.",
             }),
@@ -98,14 +97,14 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         .await;
 
     let newsletter_request_body = serde_json::json!({
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
         "title": "Newsletter title",
         "text_content": "Newsletter body as plain text.",
         "html_content": "<p>Newsletter body as HTML.</p>",
     });
 
     let response = app.post_newsletter(&newsletter_request_body).await;
-
-    assert_eq!(response.status().as_u16(), 200);
+    assert_is_redirect_to(&response, "/admin/newsletters");
 }
 
 #[actix_web::test]
@@ -123,6 +122,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         .await;
 
     let newsletter_request_body = serde_json::json!({
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
         "title": "Newsletter title",
         "text_content": "Newsletter body as plain text.",
         "html_content": "<p>Newsletter body as HTML.</p>",
@@ -130,7 +130,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 
     let response = app.post_newsletter(&newsletter_request_body).await;
 
-    assert_eq!(response.status().as_u16(), 200);
+    assert_is_redirect_to(&response, "/admin/newsletters");
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::ConfirmationLinks {

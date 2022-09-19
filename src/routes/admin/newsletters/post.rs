@@ -1,4 +1,10 @@
-use crate::{domain::SubscriberEmail, email_client::EmailClient, utils::{e500, see_other}};
+use crate::{
+    authentication::UserId,
+    domain::SubscriberEmail,
+    email_client::EmailClient,
+    idempotency::{get_saved_response, IdempotencyKey, save_response},
+    utils::{e400, e500, see_other},
+};
 use actix_web::{web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
@@ -6,31 +12,44 @@ use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
+    idempotency_key: String,
     title: String,
     html_content: String,
     text_content: String,
 }
 
 #[tracing::instrument(
-    skip(body, pool, email_client),
+    skip(form, pool, email_client),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn publish_newsletter(
-    body: web::Form<FormData>,
+    form: web::Form<FormData>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
+    user_id: web::ReqData<UserId>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let FormData {
+        title,
+        text_content,
+        html_content,
+        idempotency_key,
+    } = form.0;
+    let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
+
+    if let Some(saved_response) = get_saved_response(&pool, &idempotency_key, &user_id)
+        .await
+        .map_err(e500)?
+    {
+        success_message().send();
+        return Ok(saved_response);
+    }
+
     let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
     for subscriber in subscribers {
         match subscriber {
             Ok(subscriber) => {
                 email_client
-                    .send_email(
-                        &subscriber.email,
-                        &body.0.title,
-                        &body.0.html_content,
-                        &body.0.text_content,
-                    )
+                    .send_email(&subscriber.email, &title, &html_content, &text_content)
                     .await
                     .with_context(|| {
                         format!("Failed to send newsletter issue to {}.", subscriber.email)
@@ -49,8 +68,16 @@ pub async fn publish_newsletter(
             }
         }
     }
-    FlashMessage::success("The newsletter issue has been published!").send();
-    Ok(see_other("/admin/newsletters"))
+    success_message().send();
+    let response = see_other("/admin/newsletters");
+    let response = save_response(&pool, &idempotency_key, &user_id, response)
+        .await
+        .map_err(e500)?;
+    Ok(response)
+}
+
+fn success_message() -> FlashMessage {
+    FlashMessage::info("The newsletter issue has been published!")
 }
 
 #[tracing::instrument(skip(pool))]
