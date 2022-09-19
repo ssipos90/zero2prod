@@ -1,5 +1,6 @@
-use crate::{domain::SubscriberEmail, email_client::EmailClient, utils::e500};
+use crate::{domain::SubscriberEmail, email_client::EmailClient, utils::{e500, see_other}};
 use actix_web::{web, HttpResponse};
+use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
 use sqlx::PgPool;
 
@@ -48,7 +49,8 @@ pub async fn publish_newsletter(
             }
         }
     }
-    Ok(HttpResponse::Ok().finish())
+    FlashMessage::success("The newsletter issue has been published!").send();
+    Ok(see_other("/admin/newsletters"))
 }
 
 #[tracing::instrument(skip(pool))]

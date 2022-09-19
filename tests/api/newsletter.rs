@@ -3,10 +3,48 @@ use wiremock::{
     Mock, ResponseTemplate,
 };
 
-use crate::helpers::{spawn_app, TestApp};
+use crate::helpers::{spawn_app, TestApp, assert_is_redirect_to};
 
 #[actix_web::test]
-async fn newsletters_returns_400_for_invalid_data () {
+async fn creation_is_idempotent() {
+    let app = spawn_app().await;
+    create_confirmed_subscriber(&app).await;
+    app.login_test_user().await.unwrap();
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    // first
+    let newsletter_request_body = serde_json::json!({
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "title": "Newsletter title",
+        "text_content": "Newsletter body as plain text.",
+        "html_content": "<p>Newsletter body as HTML.</p>",
+    });
+
+    let response = app
+        .post_newsletter(&newsletter_request_body)
+        .await;
+    assert_is_redirect_to(&response, "/admin/newsletters");
+
+    let html_page = app.get_newsletter_html().await;
+    assert!(html_page.contains("The newsletter issue has been published!"));
+
+    // second
+    let response = app
+        .post_newsletter(&newsletter_request_body)
+        .await;
+    assert_is_redirect_to(&response, "/admin/newsletters");
+    let html_page = app.get_newsletter_html().await;
+    assert!(html_page.contains("The newsletter issue has been published!"));
+}
+
+#[actix_web::test]
+async fn returns_400_for_invalid_data() {
     let app = spawn_app().await;
     app.login_test_user().await.unwrap();
 
@@ -16,28 +54,29 @@ async fn newsletters_returns_400_for_invalid_data () {
                 "text_content": "Newsletter body as plain text.",
                 "html_content": "<p>Newsletter body as HTML.</p>",
             }),
-            "missing title"
+            "missing title",
         ),
         (
             serde_json::json!({
                 "title": "Newsletter title",
                 "html_content": "<p>Newsletter body as HTML.</p>",
             }),
-            "missing text content"
+            "missing text content",
         ),
         (
             serde_json::json!({
                 "title": "Newsletter title",
                 "text_content": "Newsletter body as plain text.",
             }),
-            "missing html content"
+            "missing html content",
         ),
     ];
 
     for (invalid_body, error_message) in test_cases {
         let response = app.post_newsletter(&invalid_body).await;
 
-        assert_eq!( 400,
+        assert_eq!(
+            400,
             response.status().as_u16(),
             "The API did not fail with '400 Bad Request' when the payload was '{}.'",
             error_message
@@ -94,7 +133,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     assert_eq!(response.status().as_u16(), 200);
 }
 
-async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::ConfirmationLinks  {
+async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::ConfirmationLinks {
     let body = "{\"name\":\"le guin\",\"email\":\"ursula_le_guin@gmail.com\"}";
 
     let _mock_guard = Mock::given(path("/email"))
@@ -121,11 +160,11 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::Confirm
 }
 
 async fn create_confirmed_subscriber(app: &TestApp) {
-    let confirmation_links= create_unconfirmed_subscriber(app).await;
+    let confirmation_links = create_unconfirmed_subscriber(app).await;
 
     reqwest::get(confirmation_links.html)
         .await
         .unwrap()
         .error_for_status()
-        .unwrap();    
+        .unwrap();
 }
