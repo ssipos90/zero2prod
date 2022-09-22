@@ -215,16 +215,16 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     assert_is_redirect_to(&response, "/admin/newsletters");
 }
 
+#[tracing::instrument(skip(app))]
 async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::ConfirmationLinks {
     let name: String = Name().fake();
     let email: String = SafeEmail().fake();
-    let body = serde_urlencoded::to_string(&serde_json::json!({
+    let json = &serde_json::json!({
         "name": name,
         "email": email,
-    }))
-    .unwrap();
-
-    dbg!("body: ", &body);
+    });
+    let body = serde_urlencoded::to_string(json).unwrap();
+    tracing::debug!("body = {}", &body);
 
     let _mock_guard = when_sending_an_email()
         .respond_with(ResponseTemplate::new(200))
@@ -248,6 +248,7 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> crate::helpers::Confirm
     app.get_confirmation_links(email_request)
 }
 
+#[tracing::instrument(skip(app))]
 async fn create_confirmed_subscriber(app: &TestApp) {
     let confirmation_links = create_unconfirmed_subscriber(app).await;
 

@@ -58,7 +58,7 @@ impl std::fmt::Display for StoreTokenError {
     )
 )]
 pub async fn subscribe(
-    form: web::Json<SubscribeForm>,
+    form: web::Form<SubscribeForm>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
     base_url: web::Data<ApplicationBaseUrl>,
