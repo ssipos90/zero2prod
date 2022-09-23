@@ -118,5 +118,5 @@ async fn insert_newsletter_issue(
 }
 
 fn success_message() -> FlashMessage {
-    FlashMessage::info("The newsletter issue has been published!")
+    FlashMessage::info("The newsletter issue has been queued!")
 }

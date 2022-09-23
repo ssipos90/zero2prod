@@ -85,19 +85,7 @@ impl Application {
     pub async fn build(configuration: Settings) -> anyhow::Result<Self> {
         let pool = get_connection_pool(configuration.database_url.expose_secret());
 
-        let sender_email = configuration
-            .email_client
-            .sender()
-            .expect("Invalid sender email address.");
-
-        let timeout = configuration.email_client.timeout();
-
-        let email_client = EmailClient::new(
-            configuration.email_client.base_url,
-            sender_email,
-            configuration.email_client.authorization_token,
-            timeout,
-        );
+        let email_client = configuration.email_client.client();
 
         let listener = TcpListener::bind(&configuration.application.address).unwrap_or_else(|_| {
             panic!(
